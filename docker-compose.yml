@@ -1,0 +1,120 @@
+version: '3'
+
+networks:
+  solr-net:
+    driver: bridge
+
+volumes:
+  solr-1-vol:
+    driver: local
+  solr-2-vol:
+    driver: local
+  solr-3-vol:
+    driver: local
+  zoo-1-vol:
+    driver: local
+  zoo-2-vol:
+    driver: local
+  zoo-3-vol:
+    driver: local
+
+services:
+  zoo1:
+    image: zookeeper:3.8.0
+    restart: always
+    ports:
+      - 2181:2181
+      - 7001:7000
+    environment:
+      ZOO_MY_ID: 1
+      ZOO_SERVERS: server.1=zoo1:2888:3888;2181 server.2=zoo2:2888:3888;2181 server.3=zoo3:2888:3888;2181
+      ZOO_4LW_COMMANDS_WHITELIST: mntr, conf, ruok
+      ZOO_CFG_EXTRA: "metricsProvider.className=org.apache.zookeeper.metrics.prometheus.PrometheusMetricsProvider metricsProvider.httpPort=7000 metricsProvider.exportJvmInfo=true"
+    networks:
+      - solr-net
+    volumes:
+      - zoo-1-vol:/data
+
+  zoo2:
+    image: zookeeper:3.8.0
+    restart: always
+    ports:
+      - 2182:2181
+      - 7002:7000
+    environment:
+      ZOO_MY_ID: 2
+      ZOO_SERVERS: server.1=zoo1:2888:3888;2181 server.2=zoo2:2888:3888;2181 server.3=zoo3:2888:3888;2181
+      ZOO_4LW_COMMANDS_WHITELIST: mntr, conf, ruok
+      ZOO_CFG_EXTRA: "metricsProvider.className=org.apache.zookeeper.metrics.prometheus.PrometheusMetricsProvider metricsProvider.httpPort=7000 metricsProvider.exportJvmInfo=true"
+    networks:
+      - solr-net
+    volumes:
+      - zoo-2-vol:/data
+
+  zoo3:
+    image: zookeeper:3.8.0
+    restart: always
+    ports:
+      - 2183:2181
+      - 7003:7000
+    environment:
+      ZOO_MY_ID: 3
+      ZOO_SERVERS: server.1=zoo1:2888:3888;2181 server.2=zoo2:2888:3888;2181 server.3=zoo3:2888:3888;2181
+      ZOO_4LW_COMMANDS_WHITELIST: mntr, conf, ruok
+      ZOO_CFG_EXTRA: "metricsProvider.className=org.apache.zookeeper.metrics.prometheus.PrometheusMetricsProvider metricsProvider.httpPort=7000 metricsProvider.exportJvmInfo=true"
+    networks:
+      - solr-net
+    volumes:
+      - zoo-3-vol:/data
+
+  solr1:
+    image: solr:9.0.0
+    restart: always
+    ports:
+     - "8981:8983"
+    environment:
+      - ZK_HOST=zoo1:2181,zoo2:2181,zoo3:2181
+      - SOLR_HEAP=1g
+    networks:
+      - solr-net
+    volumes:
+      - solr-1-vol:/var/solr
+      - ./configset:/app/configset
+    depends_on:
+      - zoo1
+      - zoo2
+      - zoo3
+
+  solr2:
+    image: solr:9.0.0
+    restart: always
+    ports:
+     - "8982:8983"
+    environment:
+      - ZK_HOST=zoo1:2181,zoo2:2181,zoo3:2181
+      - SOLR_HEAP=1g
+    networks:
+      - solr-net
+    volumes:
+      - solr-2-vol:/var/solr
+    depends_on:
+      - zoo1
+      - zoo2
+      - zoo3
+
+  solr3:
+    image: solr:9.0.0
+    restart: always
+    ports:
+     - "8983:8983"
+    environment:
+      - ZK_HOST=zoo1:2181,zoo2:2181,zoo3:2181
+      - SOLR_HEAP=1g
+    networks:
+      - solr-net
+    volumes:
+      - solr-3-vol:/var/solr
+    depends_on:
+      - zoo1
+      - zoo2
+      - zoo3
